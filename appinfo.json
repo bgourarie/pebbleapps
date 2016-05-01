@@ -8,7 +8,26 @@
     "longName": "Tutorial 1",
     "projectType": "native",
     "resources": {
-        "media": []
+        "media": [
+            {
+                "file": "images/background.png",
+                "name": "IMAGE_TUTORIAL_BG",
+                "targetPlatforms": null,
+                "type": "bitmap"
+            },
+            {
+                "file": "fonts/Chalkduster.ttf",
+                "name": "FONT_CHALKDUSTER_20",
+                "targetPlatforms": null,
+                "type": "font"
+            },
+            {
+                "file": "fonts/Chalkduster.ttf",
+                "name": "FONT_CHALKDUSTER_40",
+                "targetPlatforms": null,
+                "type": "font"
+            }
+        ]
     },
     "sdkVersion": "3",
     "shortName": "Tutorial 1",
