@@ -1,0 +1,23 @@
+{
+    "appKeys": {},
+    "capabilities": [
+        ""
+    ],
+    "companyName": "Ben Gourarie",
+    "enableMultiJS": true,
+    "longName": "Tutorial 1",
+    "projectType": "native",
+    "resources": {
+        "media": []
+    },
+    "sdkVersion": "3",
+    "shortName": "Tutorial 1",
+    "targetPlatforms": [
+        "basalt"
+    ],
+    "uuid": "71f5c451-70a2-4f0a-aa44-83024b5455de",
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": true
+    }
+}
