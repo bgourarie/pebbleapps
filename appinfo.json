@@ -1,7 +1,11 @@
 {
-    "appKeys": {},
+    "appKeys": {
+        "KEY_CONDITIONS": 1,
+        "KEY_TEMPERATURE": 0
+    },
     "capabilities": [
-        ""
+        "location",
+        "health"
     ],
     "companyName": "Ben Gourarie",
     "enableMultiJS": true,
@@ -17,13 +21,13 @@
             },
             {
                 "file": "fonts/Chalkduster.ttf",
-                "name": "FONT_CHALKDUSTER_20",
+                "name": "FONT_CHALKDUSTER_40",
                 "targetPlatforms": null,
                 "type": "font"
             },
             {
                 "file": "fonts/Chalkduster.ttf",
-                "name": "FONT_CHALKDUSTER_40",
+                "name": "FONT_CHALKDUSTER_20",
                 "targetPlatforms": null,
                 "type": "font"
             }
