@@ -5,12 +5,29 @@ static Window *s_main_window;
 static TextLayer *s_time_layer;
 static TextLayer *s_date_layer;
 static TextLayer *s_weather_layer;
-static GFont s_time_font;
-static GFont s_date_font;
+static GFont s_time_font,  s_date_font;
 static BitmapLayer *s_background_layer;
 static GBitmap *s_background_bitmap;
+static int s_battery_level;
+static Layer *s_battery_layer;
 
+static void battery_update_proc(Layer *layer, GContext *ctx) {
+  GRect bounds = layer_get_bounds(layer);
+  // ???
+  int width = (int)(float)(((float) s_battery_level / 100.0F ) * 111.0F);
+  // draw the background
+  graphics_context_set_fill_color(ctx, GColorBlack);
+  graphics_fill_rect(ctx,bounds,0,GCornerNone);
+  // draw the bar
+  graphics_context_set_fill_color(ctx,GColorWhite);
+  graphics_fill_rect(ctx, GRect(0,0,width,bounds.size.h),0,GCornerNone);
+}
+static void battery_callback(BatteryChargeState state) {
+  s_battery_level = state.charge_percent;
+  layer_mark_dirty(s_battery_layer);
+}
 static void update_date(){
+//   APP_LOG(0, '%s', "updating date right now");
   time_t temp = time(NULL);
   struct tm *tick_time = localtime(&temp);
   
@@ -19,7 +36,7 @@ static void update_date(){
   text_layer_set_text(s_date_layer, s_buffer);
 }
 static void update_time(){
-  
+//   APP_LOG('0', '%s', ' time updating');
   time_t temp = time(NULL);
   struct tm *tick_time = localtime(&temp);
   
@@ -34,14 +51,14 @@ static void update_time(){
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   update_time();
   if(tick_time->tm_min % 30 == 0){
+//     APP_LOG('0', '%s', ' sending app message');
     DictionaryIterator *iter;
     app_message_outbox_begin(&iter);
     dict_write_uint8(iter,0,0);
     app_message_outbox_send();
   }
-}
-static void date_tick_handler(struct tm *tick_time, TimeUnits units_changed) {
-  update_date();
+  if(tick_time->tm_hour==0 && tick_time->tm_min == 0)
+    update_date();
 }
 static void main_window_load(Window *window){
 
@@ -77,10 +94,17 @@ static void main_window_load(Window *window){
   s_background_layer = bitmap_layer_create(bounds);
   bitmap_layer_set_bitmap(s_background_layer,s_background_bitmap);
 
+  // create the battery meter:
+  s_battery_layer = layer_create(GRect(18,52,111,4));
+  layer_set_update_proc(s_battery_layer, battery_update_proc);
+ 
   
   // add background bitmap BEFORE other stuff
   layer_add_child(window_layer, bitmap_layer_get_layer(s_background_layer));
- 
+
+  // add battery to window:
+  layer_add_child(window_get_root_layer(window),s_battery_layer);
+  
   // setting bg color to non-clear makes the rect bounds visible, which is ugly but whatever.
   text_layer_set_background_color(s_time_layer, GColorClear);
 // check https://developer.pebble.com/guides/tools-and-resources/color-picker
@@ -105,6 +129,7 @@ static void main_window_unload(Window *window){
   fonts_unload_custom_font(s_date_font);
   gbitmap_destroy(s_background_bitmap);
   bitmap_layer_destroy(s_background_layer);
+  layer_destroy(s_battery_layer);
 }
 static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   static char temp_buffer[8];
@@ -142,7 +167,11 @@ static void init(){
   update_date();
   window_set_background_color(s_main_window, GColorBlack);
   tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
-  tick_timer_service_subscribe(DAY_UNIT, date_tick_handler);
+  
+  //register for battery updates:
+  battery_state_service_subscribe(battery_callback);
+  // set initial battery level:
+  battery_callback(battery_state_service_peek());
   // Register callbacks
   app_message_register_inbox_received(inbox_received_callback);
   app_message_register_inbox_dropped(inbox_dropped_callback);

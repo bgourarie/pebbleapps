@@ -21,13 +21,13 @@
             },
             {
                 "file": "fonts/Chalkduster.ttf",
-                "name": "FONT_CHALKDUSTER_40",
+                "name": "FONT_CHALKDUSTER_20",
                 "targetPlatforms": null,
                 "type": "font"
             },
             {
                 "file": "fonts/Chalkduster.ttf",
-                "name": "FONT_CHALKDUSTER_20",
+                "name": "FONT_CHALKDUSTER_40",
                 "targetPlatforms": null,
                 "type": "font"
             }
