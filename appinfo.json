@@ -14,6 +14,12 @@
     "resources": {
         "media": [
             {
+                "file": "images/bt-icon.png",
+                "name": "IMAGE_BT_ICON",
+                "targetPlatforms": null,
+                "type": "bitmap"
+            },
+            {
                 "file": "images/background.png",
                 "name": "IMAGE_TUTORIAL_BG",
                 "targetPlatforms": null,

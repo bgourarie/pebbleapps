@@ -6,10 +6,18 @@ static TextLayer *s_time_layer;
 static TextLayer *s_date_layer;
 static TextLayer *s_weather_layer;
 static GFont s_time_font,  s_date_font;
-static BitmapLayer *s_background_layer;
-static GBitmap *s_background_bitmap;
+static BitmapLayer *s_background_layer, *s_bt_icon_layer;
+static GBitmap *s_background_bitmap, *s_bt_icon_bitmap;
 static int s_battery_level;
 static Layer *s_battery_layer;
+
+static void bluetooth_callback(bool connected){
+  layer_set_hidden(bitmap_layer_get_layer(s_bt_icon_layer), connected);
+  if(!connected) {
+    vibes_double_pulse();
+  }
+}
+
 
 static void battery_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
@@ -98,12 +106,19 @@ static void main_window_load(Window *window){
   s_battery_layer = layer_create(GRect(18,52,111,4));
   layer_set_update_proc(s_battery_layer, battery_update_proc);
  
+  // create the bt icon stuff
+  s_bt_icon_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_BT_ICON);
+  s_bt_icon_layer = bitmap_layer_create(GRect(59,5,30,30));
+  bitmap_layer_set_bitmap(s_bt_icon_layer, s_bt_icon_bitmap);
+
   
   // add background bitmap BEFORE other stuff
   layer_add_child(window_layer, bitmap_layer_get_layer(s_background_layer));
 
   // add battery to window:
   layer_add_child(window_get_root_layer(window),s_battery_layer);
+ 
+  
   
   // setting bg color to non-clear makes the rect bounds visible, which is ugly but whatever.
   text_layer_set_background_color(s_time_layer, GColorClear);
@@ -117,8 +132,10 @@ static void main_window_load(Window *window){
   text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
   // and dont forget to add it to the window layer
   layer_add_child(window_layer, text_layer_get_layer(s_time_layer));
-  layer_add_child(window_layer, text_layer_get_layer(s_date_layer));
+ // layer_add_child(window_layer, text_layer_get_layer(s_date_layer));
   layer_add_child(window_layer, text_layer_get_layer(s_weather_layer));
+   // add bt icon to window:
+  layer_add_child(window_get_root_layer(window),bitmap_layer_get_layer(s_bt_icon_layer));
 }
 
 static void main_window_unload(Window *window){
@@ -129,6 +146,8 @@ static void main_window_unload(Window *window){
   fonts_unload_custom_font(s_date_font);
   gbitmap_destroy(s_background_bitmap);
   bitmap_layer_destroy(s_background_layer);
+  gbitmap_destroy(s_bt_icon_bitmap);
+  bitmap_layer_destroy(s_bt_icon_layer);
   layer_destroy(s_battery_layer);
 }
 static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
@@ -168,6 +187,10 @@ static void init(){
   window_set_background_color(s_main_window, GColorBlack);
   tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
   
+  // register for BT connection updates:
+  connection_service_subscribe((ConnectionHandlers){
+    .pebble_app_connection_handler = bluetooth_callback });
+  
   //register for battery updates:
   battery_state_service_subscribe(battery_callback);
   // set initial battery level:
@@ -181,6 +204,7 @@ static void init(){
   const int inbox_size = 128;
   const int outbox_size = 128;
   app_message_open(inbox_size, outbox_size);
+   bluetooth_callback(connection_service_peek_pebble_app_connection());
 }
 static void deinit(){
   window_destroy(s_main_window);
