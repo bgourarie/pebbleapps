@@ -6,8 +6,8 @@ static TextLayer *s_time_layer;
 static TextLayer *s_date_layer;
 static TextLayer *s_weather_layer;
 static GFont s_time_font,  s_date_font;
-static BitmapLayer *s_background_layer, *s_bt_icon_layer;
-static GBitmap *s_background_bitmap, *s_bt_icon_bitmap;
+static BitmapLayer *s_background_layer, *s_bt_icon_layer, *s_weather_icon_layer;
+static GBitmap *s_background_bitmap, *s_bt_icon_bitmap, *s_weather_icons_bitmap, *s_weather_icon_bitmap;
 static int s_battery_level;
 static Layer *s_battery_layer;
 
@@ -40,7 +40,7 @@ static void update_date(){
   struct tm *tick_time = localtime(&temp);
   
   static char s_buffer[12];
-  strftime(s_buffer, sizeof(s_buffer), "%a %b %d", tick_time);
+  strftime(s_buffer, sizeof(s_buffer), "%a %d %b", tick_time);
   text_layer_set_text(s_date_layer, s_buffer);
 }
 static void update_time(){
@@ -88,13 +88,17 @@ static void main_window_load(Window *window){
   s_date_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CHALKDUSTER_20));
   // also for weather:
   s_weather_layer = text_layer_create(
-    GRect(0, PBL_IF_ROUND_ELSE(125,120), bounds.size.w, 25) );
+    GRect(45, PBL_IF_ROUND_ELSE(128,124), bounds.size.w/3, 25) );
+  s_weather_icon_layer = bitmap_layer_create(GRect(0, PBL_IF_ROUND_ELSE(125,120), 40, 40));
+  s_weather_icons_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_WEATHER_ICONS);
+  s_weather_icon_bitmap = gbitmap_create_as_sub_bitmap(s_weather_icons_bitmap, GRect(0,0,40,40));
+  bitmap_layer_set_bitmap(s_weather_icon_layer, s_weather_icon_bitmap);
   
   //style the weather
   text_layer_set_background_color(s_weather_layer, GColorClear);
   text_layer_set_text_color(s_weather_layer, GColorMintGreen);
   text_layer_set_text_alignment(s_weather_layer, GTextAlignmentCenter);
-  text_layer_set_text(s_weather_layer,"Loading...");
+  text_layer_set_text(s_weather_layer,"...");
   text_layer_set_font(s_weather_layer, s_date_font);
   
   // create the background:
@@ -110,18 +114,16 @@ static void main_window_load(Window *window){
   s_bt_icon_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_BT_ICON);
   s_bt_icon_layer = bitmap_layer_create(GRect(59,5,30,30));
   bitmap_layer_set_bitmap(s_bt_icon_layer, s_bt_icon_bitmap);
-
-  
   // add background bitmap BEFORE other stuff
   layer_add_child(window_layer, bitmap_layer_get_layer(s_background_layer));
 
   // add battery to window:
   layer_add_child(window_get_root_layer(window),s_battery_layer);
- 
-  
-  
   // setting bg color to non-clear makes the rect bounds visible, which is ugly but whatever.
   text_layer_set_background_color(s_time_layer, GColorClear);
+     // add bt icon to window:
+  layer_add_child(window_get_root_layer(window),bitmap_layer_get_layer(s_bt_icon_layer));
+
 // check https://developer.pebble.com/guides/tools-and-resources/color-picker
   text_layer_set_text_color(s_time_layer, GColorMintGreen);
   text_layer_set_font(s_time_layer, s_time_font);  
@@ -132,10 +134,9 @@ static void main_window_load(Window *window){
   text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
   // and dont forget to add it to the window layer
   layer_add_child(window_layer, text_layer_get_layer(s_time_layer));
- // layer_add_child(window_layer, text_layer_get_layer(s_date_layer));
+  layer_add_child(window_layer, text_layer_get_layer(s_date_layer));
   layer_add_child(window_layer, text_layer_get_layer(s_weather_layer));
-   // add bt icon to window:
-  layer_add_child(window_get_root_layer(window),bitmap_layer_get_layer(s_bt_icon_layer));
+  layer_add_child(window_layer, bitmap_layer_get_layer(s_weather_icon_layer));
 }
 
 static void main_window_unload(Window *window){
@@ -145,14 +146,16 @@ static void main_window_unload(Window *window){
   text_layer_destroy(s_date_layer);
   fonts_unload_custom_font(s_date_font);
   gbitmap_destroy(s_background_bitmap);
+  gbitmap_destroy(s_weather_icons_bitmap);
   bitmap_layer_destroy(s_background_layer);
+  bitmap_layer_destroy(s_weather_icon_layer);
   gbitmap_destroy(s_bt_icon_bitmap);
+  gbitmap_destroy(s_weather_icon_bitmap);
   bitmap_layer_destroy(s_bt_icon_layer);
   layer_destroy(s_battery_layer);
 }
 static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   static char temp_buffer[8];
-  static char cond_buffer[32];
   static char weather_layer_buffer[32];
   
   Tuple *temp_tuple       = dict_find(iterator, KEY_TEMPERATURE);
@@ -160,9 +163,12 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
 
   if(temp_tuple && conditions_tuple) {
     snprintf(temp_buffer, sizeof(temp_buffer),"%dF", (int)temp_tuple->value->int32);
-    snprintf(cond_buffer,sizeof(cond_buffer),"%s",conditions_tuple->value->cstring);
-    snprintf(weather_layer_buffer,sizeof(weather_layer_buffer),"%s, %s",temp_buffer,cond_buffer);
+    snprintf(weather_layer_buffer,sizeof(weather_layer_buffer),"%s",temp_buffer);
     text_layer_set_text(s_weather_layer, weather_layer_buffer);
+    // set the offset for the condition:
+   int cond_offset = conditions_tuple->value->int32;
+    s_weather_icon_bitmap = gbitmap_create_as_sub_bitmap(s_weather_icons_bitmap, GRect(40*cond_offset, 0, 40,40));
+    bitmap_layer_set_bitmap(s_weather_icon_layer, s_weather_icon_bitmap);
   }
 }
 static void inbox_dropped_callback(AppMessageResult reason, void *context) {
