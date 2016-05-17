@@ -1,24 +1,63 @@
 #include <pebble.h>
 #define KEY_TEMPERATURE 0
 #define KEY_CONDITIONS 1
+#define STEP_GOAL 10000
+
 static Window *s_main_window;
 static TextLayer *s_time_layer;
 static TextLayer *s_date_layer;
-static TextLayer *s_weather_layer;
-static GFont s_time_font,  s_date_font;
+static TextLayer *s_weather_layer, *s_steps_layer;
+static GFont s_time_font,  s_date_font, s_lower_font;
 static BitmapLayer *s_background_layer, *s_bt_icon_layer, *s_weather_icon_layer;
 static GBitmap *s_background_bitmap, *s_bt_icon_bitmap, *s_weather_icons_bitmap, *s_weather_icon_bitmap;
-static int s_battery_level;
-static Layer *s_battery_layer;
+static int s_battery_level, s_daily_steps;
+static Layer *s_battery_layer, *s_steps_progress_layer;
 
+static void fetch_current_steps(){
+  HealthMetric metric = HealthMetricStepCount;
+  time_t start = time_start_of_today();
+  time_t end = time(NULL);
+  
+  // Check the metric has data available for today
+  HealthServiceAccessibilityMask mask = health_service_metric_accessible(metric, 
+    start, end);
+  
+  if(mask & HealthServiceAccessibilityMaskAvailable) {
+            s_daily_steps = (int)health_service_sum_today(metric);
+  } else {
+    s_daily_steps = 0;
+  }
+}
+
+static void update_steps_progress_layer(Layer *layer, GContext *ctx){
+  GRect bounds = layer_get_bounds(layer);
+  // get step progress ratio as width
+  int w = (int)(float)(((float)s_daily_steps / (float) STEP_GOAL) * (float)bounds.size.w);
+  graphics_context_set_fill_color(ctx, GColorBlack);
+  graphics_fill_rect(ctx,bounds,0,GCornerNone);
+  graphics_context_set_fill_color(ctx, GColorWhite);
+  graphics_fill_rect(ctx, GRect(0,0,w,bounds.size.h),0,GCornerNone);
+}
+static void fake_steps_callback(){
+  fetch_current_steps();
+  layer_mark_dirty(s_steps_progress_layer);
+  static char s_buffer[12];
+  if(s_daily_steps > 1000 )  {
+   int  thou = (s_daily_steps+50) / 1000.0;
+   int hund = ((s_daily_steps - thou*1000.0)+50)/ 100.0;    
+    snprintf(s_buffer, sizeof(s_buffer), "%d.%dK",thou,hund);
+  }
+  else{
+    snprintf(s_buffer, sizeof(s_buffer), "%d",s_daily_steps);
+  }
+  text_layer_set_text(s_steps_layer, s_buffer);
+}
 static void bluetooth_callback(bool connected){
   layer_set_hidden(bitmap_layer_get_layer(s_bt_icon_layer), connected);
   if(!connected) {
     vibes_double_pulse();
   }
 }
-
-
 static void battery_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
   // ???
@@ -58,6 +97,8 @@ static void update_time(){
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   update_time();
+  // update steps every minute also!
+  fake_steps_callback();
   if(tick_time->tm_min % 30 == 0){
 //     APP_LOG('0', '%s', ' sending app message');
     DictionaryIterator *iter;
@@ -86,9 +127,20 @@ static void main_window_load(Window *window){
     GRect(0,5, bounds.size.w, 40)
   );
   s_date_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CHALKDUSTER_20));
+  
+  s_lower_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CHALKDUSTER_18));
+  
+  // for step count:
+  s_steps_layer = text_layer_create(GRect(2*bounds.size.w/3 - 15 , PBL_IF_ROUND_ELSE(128,124), 65, 25));
+  text_layer_set_background_color(s_steps_layer, GColorClear);
+  text_layer_set_text_color(s_steps_layer, GColorMintGreen);
+  text_layer_set_text_alignment(s_steps_layer, GTextAlignmentCenter);
+  text_layer_set_text(s_steps_layer, "00.0k");
+  text_layer_set_font(s_steps_layer, s_lower_font);
+  
   // also for weather:
   s_weather_layer = text_layer_create(
-    GRect(45, PBL_IF_ROUND_ELSE(128,124), bounds.size.w/3, 25) );
+    GRect(41, PBL_IF_ROUND_ELSE(128,124), bounds.size.w/3-10, 25) );
   s_weather_icon_layer = bitmap_layer_create(GRect(0, PBL_IF_ROUND_ELSE(125,120), 40, 40));
   s_weather_icons_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_WEATHER_ICONS);
   s_weather_icon_bitmap = gbitmap_create_as_sub_bitmap(s_weather_icons_bitmap, GRect(0,0,40,40));
@@ -99,7 +151,7 @@ static void main_window_load(Window *window){
   text_layer_set_text_color(s_weather_layer, GColorMintGreen);
   text_layer_set_text_alignment(s_weather_layer, GTextAlignmentCenter);
   text_layer_set_text(s_weather_layer,"...");
-  text_layer_set_font(s_weather_layer, s_date_font);
+  text_layer_set_font(s_weather_layer, s_lower_font);
   
   // create the background:
   s_background_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_TUTORIAL_BG);
@@ -107,9 +159,11 @@ static void main_window_load(Window *window){
   bitmap_layer_set_bitmap(s_background_layer,s_background_bitmap);
 
   // create the battery meter:
-  s_battery_layer = layer_create(GRect(18,52,111,4));
+  s_battery_layer = layer_create(GRect(18,52,109,4));
   layer_set_update_proc(s_battery_layer, battery_update_proc);
- 
+  // create the steps layer
+  s_steps_progress_layer = layer_create(GRect(18,111, 109,4));
+  layer_set_update_proc(s_steps_progress_layer, update_steps_progress_layer);
   // create the bt icon stuff
   s_bt_icon_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_BT_ICON);
   s_bt_icon_layer = bitmap_layer_create(GRect(59,5,30,30));
@@ -119,6 +173,8 @@ static void main_window_load(Window *window){
 
   // add battery to window:
   layer_add_child(window_get_root_layer(window),s_battery_layer);
+  // add step goal:
+  layer_add_child(window_get_root_layer(window), s_steps_progress_layer);
   // setting bg color to non-clear makes the rect bounds visible, which is ugly but whatever.
   text_layer_set_background_color(s_time_layer, GColorClear);
      // add bt icon to window:
@@ -136,15 +192,20 @@ static void main_window_load(Window *window){
   layer_add_child(window_layer, text_layer_get_layer(s_time_layer));
   layer_add_child(window_layer, text_layer_get_layer(s_date_layer));
   layer_add_child(window_layer, text_layer_get_layer(s_weather_layer));
+    // add step text:
+  layer_add_child(window_get_root_layer(window),text_layer_get_layer(s_steps_layer));
+
   layer_add_child(window_layer, bitmap_layer_get_layer(s_weather_icon_layer));
 }
 
 static void main_window_unload(Window *window){
   fonts_unload_custom_font(s_time_font);
   text_layer_destroy(s_time_layer);
+  text_layer_destroy(s_steps_layer);
   text_layer_destroy(s_weather_layer);
   text_layer_destroy(s_date_layer);
   fonts_unload_custom_font(s_date_font);
+  fonts_unload_custom_font(s_lower_font);
   gbitmap_destroy(s_background_bitmap);
   gbitmap_destroy(s_weather_icons_bitmap);
   bitmap_layer_destroy(s_background_layer);
@@ -153,6 +214,7 @@ static void main_window_unload(Window *window){
   gbitmap_destroy(s_weather_icon_bitmap);
   bitmap_layer_destroy(s_bt_icon_layer);
   layer_destroy(s_battery_layer);
+  layer_destroy(s_steps_progress_layer);
 }
 static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   static char temp_buffer[8];
@@ -201,6 +263,8 @@ static void init(){
   battery_state_service_subscribe(battery_callback);
   // set initial battery level:
   battery_callback(battery_state_service_peek());
+  // set initial steps level:
+  fake_steps_callback();
   // Register callbacks
   app_message_register_inbox_received(inbox_received_callback);
   app_message_register_inbox_dropped(inbox_dropped_callback);

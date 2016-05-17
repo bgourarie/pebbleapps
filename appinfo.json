@@ -33,7 +33,7 @@
             },
             {
                 "file": "fonts/Chalkduster.ttf",
-                "name": "FONT_CHALKDUSTER_20",
+                "name": "FONT_CHALKDUSTER_18",
                 "targetPlatforms": null,
                 "type": "font"
             },
@@ -42,11 +42,17 @@
                 "name": "FONT_CHALKDUSTER_40",
                 "targetPlatforms": null,
                 "type": "font"
+            },
+            {
+                "file": "fonts/Chalkduster.ttf",
+                "name": "FONT_CHALKDUSTER_20",
+                "targetPlatforms": null,
+                "type": "font"
             }
         ]
     },
     "sdkVersion": "3",
-    "shortName": "Tutorial 1",
+    "shortName": "Basic Watchface",
     "targetPlatforms": [
         "basalt"
     ],
