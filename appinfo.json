@@ -1,64 +1,43 @@
 {
-    "appKeys": {
-        "KEY_CONDITIONS": 1,
-        "KEY_TEMPERATURE": 0
-    },
+    "appKeys": {},
     "capabilities": [
-        "location",
-        "health"
+        ""
     ],
-    "companyName": "Ben Gourarie",
-    "enableMultiJS": true,
-    "longName": "Tutorial 1",
-    "projectType": "native",
+    "companyName": "ben.gourarie@gmail.com",
+    "longName": "JS-APP1",
+    "projectType": "pebblejs",
     "resources": {
         "media": [
             {
-                "file": "images/allIcons.png",
-                "name": "IMAGE_WEATHER_ICONS",
-                "targetPlatforms": null,
+                "file": "images/menu_icon.png",
+                "menuIcon": true,
+                "name": "IMAGE_MENU_ICON",
                 "type": "bitmap"
             },
             {
-                "file": "images/bt-icon.png",
-                "name": "IMAGE_BT_ICON",
-                "targetPlatforms": null,
+                "file": "images/logo_splash.png",
+                "name": "IMAGE_LOGO_SPLASH",
                 "type": "bitmap"
             },
             {
-                "file": "images/background.png",
-                "name": "IMAGE_TUTORIAL_BG",
-                "targetPlatforms": null,
+                "file": "images/tile_splash.png",
+                "name": "IMAGE_TILE_SPLASH",
                 "type": "bitmap"
             },
             {
-                "file": "fonts/Chalkduster.ttf",
-                "name": "FONT_CHALKDUSTER_18",
-                "targetPlatforms": null,
-                "type": "font"
-            },
-            {
-                "file": "fonts/Chalkduster.ttf",
-                "name": "FONT_CHALKDUSTER_40",
-                "targetPlatforms": null,
-                "type": "font"
-            },
-            {
-                "file": "fonts/Chalkduster.ttf",
-                "name": "FONT_CHALKDUSTER_20",
-                "targetPlatforms": null,
+                "file": "fonts/UbuntuMono-Regular.ttf",
+                "name": "MONO_FONT_14",
                 "type": "font"
             }
         ]
     },
     "sdkVersion": "3",
-    "shortName": "Basic Watchface",
-    "targetPlatforms": [
-        "basalt"
-    ],
-    "uuid": "71f5c451-70a2-4f0a-aa44-83024b5455de",
+    "shortName": "JS-APP1",
+    "uuid": "40c0cabc-fbde-4839-9930-8e6e3ee43657",
+    "versionCode": 1,
     "versionLabel": "1.0",
     "watchapp": {
-        "watchface": true
+        "hiddenApp": false,
+        "watchface": false
     }
 }
